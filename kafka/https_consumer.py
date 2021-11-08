@@ -13,10 +13,14 @@ def build_arsparser() -> ArgumentParser:
 
 
 def main(topics, servers, destination):
-    for msgs in zip(*map(lambda t: KafkaConsumer(t, bootstrap_servers=servers), topics)):
+    payloads = {topic: None for topic in topics}
+    for msg in KafkaConsumer(*topics, bootstrap_servers=servers):
+        payloads[msg.topic] = msg.value.decode('utf-8')
+        if any(map(lambda topic: payloads[topic] is None, topics)):
+            continue
         try:
-            requests.post(destination, data=json.dumps({
-                          m.topic: json.loads(m.value) for m in msgs}))
+            requests.post(destination, data=json.dumps(payloads))
+            payloads = {topic: None for topic in topics}
         except Exception as e:
             print(e.args)
 
