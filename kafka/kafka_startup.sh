@@ -14,4 +14,4 @@ done
 python3 /rest_api_producer.py -a "https://api.waqi.info/feed/delhi/?token=1d9e5a0caf47598601455f82453f22990f088d82"                  -t pollution-delhi -s localhost:9092 -d 2 & 
 python3 /rest_api_producer.py -a "https://api.openweathermap.org/data/2.5/weather?q=Delhi,in&appid=2e60ac296b6e007baf4cda66380be86c" -t weather-delhi   -s localhost:9092 -d 2 & 
 
-exec python3 /https_consumer.py -t weather-delhi,pollution-delhi -s localhost:9092 -d http://host.docker.internal:20200
+wait

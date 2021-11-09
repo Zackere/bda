@@ -1,0 +1,15 @@
+version: '3'
+services:
+  kafka:
+    build:
+      dockerfile: kafka/Dockerfile
+    ports:
+      - 9092:9092 # Kafka port
+      - 2181:2181 # Zookeeper port
+  nifi:
+    image: apache/nifi:latest
+    environment:
+      - SINGLE_USER_CREDENTIALS_USERNAME=admin
+      - SINGLE_USER_CREDENTIALS_PASSWORD=ctsBtRBKHRAx69EqUghvvgEvjnaLjFEB
+    ports:
+      - 8443:8443
