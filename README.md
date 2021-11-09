@@ -4,13 +4,13 @@ Run `docker-compose up -d` to run the application. After a while, `Apache Nifi` 
 
 ## Setting up basic kafka consumer example
 
-Create `ConsumeKafka_2_0` (other conumers are untested/do not work) and `LogAttribute` processors. Connect `ConsumeKafka_2_0` to `LogAttribute`. Disable `LogAttribute`. Set up `ConsumeKafka_2_0` in the following way:
+Create `ConsumeKafka_2_6` and `LogAttribute` processors. Connect `ConsumeKafka_2_6` to `LogAttribute`. Disable `LogAttribute`. Set up `ConsumeKafka_2_6` in the following way:
 
-1. `KafkaBrokers=kafka:2181`
+1. `KafkaBrokers=kafka:9092`
 2. `Topic name(s)=pollution-delhi`
 3. `Group ID=nifi-consumer-1`
 
-Start `ConsumeKafka_2_0`. Soon messages will be available for inspection in the queue.
+Start `ConsumeKafka_2_6`. Soon messages will be available for inspection in the queue.
 https://stackoverflow.com/questions/50383997/how-do-i-view-the-consumed-messages-of-kafka-in-nifi
 
 ## Stopping the application

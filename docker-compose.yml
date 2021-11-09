@@ -2,7 +2,8 @@ version: '3'
 services:
   kafka:
     build:
-      dockerfile: kafka/Dockerfile
+      context: ./kafka
+      dockerfile: Dockerfile
     ports:
       - 9092:9092 # Kafka port
       - 2181:2181 # Zookeeper port
