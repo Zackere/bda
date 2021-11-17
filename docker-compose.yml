@@ -1,12 +1,9 @@
 version: '3'
 services:
   kafka:
-    build:
-      context: ./kafka
-      dockerfile: Dockerfile
+    build: ./kafka
     ports:
       - 9092:9092 # Kafka port
-      - 2181:2181 # Zookeeper port
   nifi:
     image: apache/nifi:latest
     environment:
