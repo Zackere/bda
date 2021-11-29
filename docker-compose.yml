@@ -65,7 +65,7 @@ services:
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
     ports:
-      - 8080:8080
+      - 4040:4040
     volumes:
       - ./spark/jars/spark-sql-kafka-0-10_2.12-3.0.0.jar:/opt/bitnami/spark/jars/spark-sql-kafka-0-10_2.12-3.0.0.jar
       - ./spark/jars/spark-streaming_2.12-3.0.0.jar:/opt/bitnami/spark/jars/spark-streaming_2.12-3.0.0.jar
@@ -73,7 +73,6 @@ services:
       - ./spark/jars/spark-streaming-kafka-0-10_2.12-3.0.0.jar:/opt/bitnami/spark/jars/spark-streaming-kafka-0-10_2.12-3.0.0.jar
       - ./spark/jars/spark-token-provider-kafka-0-10_2.12-3.0.0.jar:/opt/bitnami/spark/jars/spark-token-provider-kafka-0-10_2.12-3.0.0.jar
       - ./spark/jars/commons-pool2-2.11.1.jar:/opt/bitnami/spark/jars/commons-pool2-2.11.1.jar
-      - ./spark/jars/log4j-core-2.14.1.jar:/opt/bitnami/spark/jars/log4j-core-2.14.1.jar
       - ./spark/apps/logger.py:/opt/bitnami/spark/apps/logger.py
     command: spark-submit ./apps/logger.py
   spark-worker:
@@ -94,7 +93,6 @@ services:
       - ./spark/jars/spark-streaming-kafka-0-10_2.12-3.0.0.jar:/opt/bitnami/spark/jars/spark-streaming-kafka-0-10_2.12-3.0.0.jar
       - ./spark/jars/spark-token-provider-kafka-0-10_2.12-3.0.0.jar:/opt/bitnami/spark/jars/spark-token-provider-kafka-0-10_2.12-3.0.0.jar
       - ./spark/jars/commons-pool2-2.11.1.jar:/opt/bitnami/spark/jars/commons-pool2-2.11.1.jar
-      - ./spark/jars/log4j-core-2.14.1.jar:/opt/bitnami/spark/jars/log4j-core-2.14.1.jar
 
 volumes:
   namenode:
