@@ -73,26 +73,11 @@ services:
       - ./spark/jars/spark-streaming-kafka-0-10_2.12-3.0.0.jar:/opt/bitnami/spark/jars/spark-streaming-kafka-0-10_2.12-3.0.0.jar
       - ./spark/jars/spark-token-provider-kafka-0-10_2.12-3.0.0.jar:/opt/bitnami/spark/jars/spark-token-provider-kafka-0-10_2.12-3.0.0.jar
       - ./spark/jars/commons-pool2-2.11.1.jar:/opt/bitnami/spark/jars/commons-pool2-2.11.1.jar
+      - ./spark/jars/spark-mllib_2.12-3.1.2.jar:/opt/bitnami/spark/jars/spark-mllib_2.12-3.1.2.jar
+      - ./spark/jars/spark-sql_2.12-3.1.2.jar:/opt/bitnami/spark/jars/spark-sql_2.12-3.1.2.jar
       - ./spark/apps/logger.py:/opt/bitnami/spark/apps/logger.py
-    command: spark-submit ./apps/logger.py
-  spark-worker:
-    image: docker.io/bitnami/spark:3
-    environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark:7077
-      - SPARK_WORKER_MEMORY=1G
-      - SPARK_WORKER_CORES=1
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-    volumes:
-      - ./spark/jars/spark-sql-kafka-0-10_2.12-3.0.0.jar:/opt/bitnami/spark/jars/spark-sql-kafka-0-10_2.12-3.0.0.jar
-      - ./spark/jars/spark-streaming_2.12-3.0.0.jar:/opt/bitnami/spark/jars/spark-streaming_2.12-3.0.0.jar
-      - ./spark/jars/kafka-clients-3.0.0.jar:/opt/bitnami/spark/jars/kafka-clients-3.0.0.jar
-      - ./spark/jars/spark-streaming-kafka-0-10_2.12-3.0.0.jar:/opt/bitnami/spark/jars/spark-streaming-kafka-0-10_2.12-3.0.0.jar
-      - ./spark/jars/spark-token-provider-kafka-0-10_2.12-3.0.0.jar:/opt/bitnami/spark/jars/spark-token-provider-kafka-0-10_2.12-3.0.0.jar
-      - ./spark/jars/commons-pool2-2.11.1.jar:/opt/bitnami/spark/jars/commons-pool2-2.11.1.jar
+      - ./spark/apps/ml.py:/opt/bitnami/spark/apps/ml.py
+    command: spark-submit ./apps/ml.py
 
 volumes:
   namenode:
