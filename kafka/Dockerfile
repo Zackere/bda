@@ -1,11 +1,9 @@
 FROM openjdk:slim
-COPY --from=python:3.9 / /
 
-RUN curl https://dlcdn.apache.org/kafka/3.0.0/kafka_2.13-3.0.0.tgz --output kafka_2.13-3.0.0.tgz && \
-    tar -xzf kafka_2.13-3.0.0.tgz && \
-    python3 -m pip install kafka-python requests
+RUN apt-get update -y && apt-get install curl -y && \
+    curl https://dlcdn.apache.org/kafka/3.0.0/kafka_2.13-3.0.0.tgz --output kafka_2.13-3.0.0.tgz && \
+    tar -xzf kafka_2.13-3.0.0.tgz
 
-COPY ./rest_api_producer.py rest_api_producer.py
-COPY ./kafka_startup.sh kafka_startup.sh
+COPY ./kafka-startup.sh .
 
-CMD ./kafka_startup.sh kafka_2.13-3.0.0
+CMD ./kafka-startup.sh kafka_2.13-3.0.0
