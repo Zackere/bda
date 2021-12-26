@@ -43,7 +43,14 @@ services:
       SERVICE_PRECONDITION: 'namenode:50070 datanode:50075 hive-metastore-postgresql:5432'
   hive-metastore-postgresql:
     image: bde2020/hive-metastore-postgresql:2.3.0
+  mongodb:
+    image : mongo
+    container_name: mongodb
+    ports:
+    - 27017:27017
+    restart: unless-stopped
 
 volumes:
   namenode:
   datanode:
+  mongodb:
