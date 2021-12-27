@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json,udf
+from pyspark.sql.functions import from_json
 from pyspark.sql.types import *
 
 spark = SparkSession.builder.appName("LoggerApp").getOrCreate()

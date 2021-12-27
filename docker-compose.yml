@@ -58,6 +58,7 @@ services:
       - 8889:8889
   spark:
     image: docker.io/bitnami/spark:3
+    user: root
     environment:
       - SPARK_MODE=master
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
@@ -77,7 +78,8 @@ services:
       - ./spark/jars/spark-sql_2.12-3.1.2.jar:/opt/bitnami/spark/jars/spark-sql_2.12-3.1.2.jar
       - ./spark/apps/logger.py:/opt/bitnami/spark/apps/logger.py
       - ./spark/apps/ml.py:/opt/bitnami/spark/apps/ml.py
-    command: spark-submit ./apps/ml.py
+    command: >
+      sh -c "python3 -m pip install numpy && spark-submit ./apps/ml.py"
 
 volumes:
   namenode:
