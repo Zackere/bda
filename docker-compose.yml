@@ -26,23 +26,44 @@ services:
     env_file:
       - ./hive/hadoop-hive.env
     environment:
-      SERVICE_PRECONDITION: 'namenode:50070'
+      SERVICE_PRECONDITION: namenode:50070
   hive-server:
     build: ./hive-server
     env_file:
       - ./hive/hadoop-hive.env
     environment:
-      HIVE_CORE_CONF_javax_jdo_option_ConnectionURL: 'jdbc:postgresql://hive-metastore/metastore'
-      SERVICE_PRECONDITION: 'hive-metastore:9083'
+      HIVE_CORE_CONF_javax_jdo_option_ConnectionURL: jdbc:postgresql://hive-metastore/metastore
+      SERVICE_PRECONDITION: hive-metastore:9083
   hive-metastore:
     image: bde2020/hive:2.3.2-postgresql-metastore
     env_file:
       - ./hive/hadoop-hive.env
     command: /opt/hive/bin/hive --service metastore
     environment:
-      SERVICE_PRECONDITION: 'namenode:50070 datanode:50075 hive-metastore-postgresql:5432'
+      SERVICE_PRECONDITION: namenode:50070 datanode:50075 hive-metastore-postgresql:5432
   hive-metastore-postgresql:
     image: bde2020/hive-metastore-postgresql:2.3.0
+  spark:
+    build: ./spark
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    ports:
+      - 8080:8080
+  spark-worker:
+    image: bitnami/spark:3
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
 
 volumes:
   namenode:

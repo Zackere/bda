@@ -5,7 +5,7 @@ cd $1
 ./bin/zookeeper-server-start.sh config/zookeeper.properties &
 ./bin/kafka-server-start.sh     config/server.properties &
 
-for extra_topic in error spark
+for extra_topic in error spark modelweights
 do
     ./bin/kafka-topics.sh --create   --topic "$extra_topic" --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
     ./bin/kafka-topics.sh --describe --topic "$extra_topic" --bootstrap-server localhost:9092

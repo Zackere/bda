@@ -12,6 +12,11 @@ do
     echo "EXECUTING COMMAND \"$sqlcmd\""
     beeline -u jdbc:hive2:// -e "$sqlcmd"
 done
+
+sqlcmd = "CREATE TABLE modelweights (id STRING, ts TIMESTAMP, weights ARRAY<FLOAT>) STORED AS ORC LOCATION 'hdfs://namenode:8020/user/nifi/modelweights';"
+echo "EXECUTING COMMAND \"$sqlcmd\""
+beeline -u jdbc:hive2:// -e "$sqlcmd"
+
 beeline -u jdbc:hive2:// -e "SHOW TABLES;"
 
 wait
