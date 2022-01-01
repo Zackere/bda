@@ -6,11 +6,37 @@ from pyspark.sql.types import *
 from pyspark.ml.classification import MultilayerPerceptronClassifier
 from kafka import KafkaProducer
 import json
+from pyhive import hive
+import time
+import numpy as np
+
 
 spark = SparkSession.builder.appName('BDAModel').getOrCreate()
 spark.sparkContext.setLogLevel('WARN')
 logger = spark.sparkContext._jvm.org.apache.log4j.LogManager.getLogger(
     __name__)
+
+model_weights = None
+for i in range(100):
+    logger.warn(f'Attempting to connect for {i}th time to hive...')
+    try:
+        conn = hive.Connection(host='hive-server')
+        cursor = conn.cursor()
+        cursor.execute(
+            'SELECT * FROM modelweights ORDER BY ts DESC')
+        row = cursor.fetchone()
+        if row:
+            # Index dependent on table schema
+            model_weights = json.loads(row[-1])
+            assert isinstance(model_weights, list)
+        logger.warn(f'Read model weights: {model_weights}')
+        cursor.close()
+        conn.close()
+        break
+    except Exception as ex:
+        logger.error(f'{ex}')
+        logger.warn('Connect failed. Trying again in 5 seconds...')
+        time.sleep(5)
 
 stream_schema = StructType([
     StructField('lon',          DoubleType(),       False),
@@ -38,7 +64,7 @@ def aqi_category(aqi):
         return 2  # Unhealthy for sensitive groups
     if aqi <= 200:
         return 3  # Unhealthy
-    if aqi < 300:
+    if aqi <= 300:
         return 4  # Very Unhrealthy
     return 5  # Hazardous
 
@@ -84,28 +110,28 @@ weather_with_pollution = asm            \
     .transform(weather_with_pollution)  \
     .withColumn('label', udf(aqi_category, IntegerType())('aqi'))
 
-model = MultilayerPerceptronClassifier(layers=layers)
-model_weights = None
 kafka_producer = KafkaProducer(bootstrap_servers='kafka:9092')
+model = MultilayerPerceptronClassifier(layers=layers)
+num_weights = sum(map(lambda p: (p[0]+1)*p[1], zip(layers, layers[1:])))
+if num_weights != len(model_weights):
+    logger.warn('Weight data is outdated!')
+    model_weights = None
 
 
 def train(batch: DataFrame, batchId):
-    global model, model_weights, layers
     if batch.count() <= 0:
         return
+    global model_weights
     # TODO: evaluate the model on batch and save the results to db or whatever for analysis
-    model_weights = model.fit(batch).weights
+    params = {
+        model.initialWeights: None if not model_weights else np.array(
+            model_weights)
+    }
+    model_weights = model.fit(batch, params).weights.tolist()
     # TODO: Do this every nth batch maybe
     kafka_producer.send('modelweights', json.dumps(
-        {'weights': model_weights.tolist()}).encode())
-    model = MultilayerPerceptronClassifier(
-        layers=layers, initialWeights=model_weights)
-    logger.warn(f'{model_weights.tolist()}')
-
-
-weather_with_pollution.writeStream  \
-    .foreachBatch(train)            \
-    .start().awaitTermination()
+        {'weights': model_weights}).encode())
+    logger.warn(f'{model_weights}')
 
 
 # weather_with_pollution.writeStream          \
@@ -113,3 +139,7 @@ weather_with_pollution.writeStream  \
 #     .trigger(processingTime='20 seconds')   \
 #     .format('console')                      \
 #     .start()
+
+weather_with_pollution.writeStream  \
+    .foreachBatch(train)            \
+    .start().awaitTermination()
