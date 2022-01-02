@@ -6,8 +6,16 @@ import base64
 from kafka import KafkaProducer
 import json
 import os
+import time
 
-kafka_producer = KafkaProducer(bootstrap_servers='kafka:9092')
+for i in range(100):
+    print(f'Connecting to kafka for {i}th time...')
+    try:
+        kafka_producer = KafkaProducer(bootstrap_servers='kafka:9092')
+        break
+    except Exception as ex:
+        print(ex)
+        time.sleep(5)
 
 
 class Handler(FileSystemEventHandler):
