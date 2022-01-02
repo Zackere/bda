@@ -3,12 +3,15 @@ from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import column, expr, from_json, udf
 from pyspark.sql.types import *
-from pyspark.ml.classification import MultilayerPerceptronClassifier
+from pyspark.ml.classification import MultilayerPerceptronClassificationModel, MultilayerPerceptronClassifier
 from kafka import KafkaProducer
 import json
 from pyhive import hive
 import time
-import numpy as np
+import random
+import base64
+import shutil
+import os
 
 
 spark = SparkSession.builder.appName('BDAModel').getOrCreate()
@@ -16,7 +19,8 @@ spark.sparkContext.setLogLevel('WARN')
 logger = spark.sparkContext._jvm.org.apache.log4j.LogManager.getLogger(
     __name__)
 
-model_weights = None
+model = None
+db_model_weights = None
 for i in range(100):
     logger.warn(f'Attempting to connect for {i}th time to hive...')
     try:
@@ -27,9 +31,17 @@ for i in range(100):
         row = cursor.fetchone()
         if row:
             # Index dependent on table schema
-            model_weights = json.loads(row[-1])
-            assert isinstance(model_weights, list)
-        logger.warn(f'Read model weights: {model_weights}')
+            weights_data = row[-1]
+            archive_path = './db_model_weights.tar.gz'
+            folder_path = './db_model_weights'
+            with open(archive_path, 'wb+') as f:
+                f.write(base64.b64decode(weights_data))
+            shutil.unpack_archive(archive_path, folder_path)
+            model = MultilayerPerceptronClassificationModel.load(folder_path)
+            db_model_weights = model.weights
+            shutil.rmtree(folder_path)
+            os.remove(archive_path)
+        logger.warn(f'Read model weights: {db_model_weights}')
         cursor.close()
         conn.close()
         break
@@ -70,25 +82,28 @@ def aqi_category(aqi):
 
 
 # TODO: Set initial offset to earliest
-df = spark.readStream                                   \
-    .format('kafka')                                    \
-    .option('kafka.bootstrap.servers', 'kafka:9092')    \
-    .option('subscribe', 'spark')                       \
+df = spark.readStream \
+    .format('kafka') \
+    .option('kafka.bootstrap.servers', 'kafka:9092') \
+    .option('subscribe', 'spark') \
+    .option('startingOffsets', 'earliest') \
     .load()
 
-df_json = df                                                                \
-    .select(from_json(df.value.cast('string'), stream_schema).alias('v'))   \
-    .select('v.*')                                                          \
+df_json = df \
+    .select(from_json(df.value.cast('string'), stream_schema).alias('v')) \
+    .select('v.*') \
     .withWatermark('ts', '20 seconds')
 
-pollution_df = df_json                                                  \
-    .filter(column('kafkatopic').startswith('pollution'))               \
-    .select('aqi', 'ts', 'kafkatopic')                                  \
+pollution_df = df_json \
+    .filter(column('kafkatopic').startswith('pollution')) \
+    .select('aqi', 'ts', 'kafkatopic', 'id') \
+    .withColumnRenamed('id', 'pollutionid') \
     .alias('pollution')
 
-weather_df = df_json                                                                                            \
-    .filter(column('kafkatopic').startswith('weather'))                                                         \
-    .select('lon', 'lat', 'temp', 'pressure', 'humidity', 'clouds', 'windspeed', 'winddeg', 'ts', 'kafkatopic') \
+weather_df = df_json \
+    .filter(column('kafkatopic').startswith('weather')) \
+    .select('lon', 'lat', 'temp', 'pressure', 'humidity', 'clouds', 'windspeed', 'winddeg', 'ts', 'kafkatopic', 'id') \
+    .withColumnRenamed('id', 'weatherid') \
     .alias('weather')
 
 
@@ -99,47 +114,52 @@ weather_with_pollution = weather_df.join(
          weather.ts + interval 10 seconds > pollution.ts                                                AND
          weather.ts < pollution.ts + interval 10 seconds
     """),
-    "inner")                                \
-    .select('weather.*', 'pollution.aqi')   \
+    "inner")                                                        \
+    .select('weather.*', 'pollution.*')  \
     .drop('ts', 'kafkatopic')
 
-layers = [len(weather_with_pollution.columns) - 1, 5, 6]
-asm = VectorAssembler(inputCols=list(
-    set(weather_with_pollution.columns) - set(['aqi'])), outputCol='features')
-weather_with_pollution = asm            \
-    .transform(weather_with_pollution)  \
+input_cols = list(
+    set(weather_with_pollution.columns) - set(['aqi', 'pollutionid', 'weatherid']))
+layers = [len(input_cols), 5, 6]
+asm = VectorAssembler(inputCols=input_cols, outputCol='features')
+weather_with_pollution = asm \
+    .transform(weather_with_pollution) \
     .withColumn('label', udf(aqi_category, IntegerType())('aqi'))
 
 kafka_producer = KafkaProducer(bootstrap_servers='kafka:9092')
-model = MultilayerPerceptronClassifier(layers=layers)
-num_weights = sum(map(lambda p: (p[0]+1)*p[1], zip(layers, layers[1:])))
-if num_weights != len(model_weights):
-    logger.warn('Weight data is outdated!')
-    model_weights = None
+trainer = MultilayerPerceptronClassifier(layers=layers)
+if db_model_weights is not None:
+    num_weights = sum(map(lambda p: (p[0]+1)*p[1], zip(layers, layers[1:])))
+    if num_weights != len(db_model_weights):
+        logger.warn('Weight data is outdated!')
+        model = None
+        db_model_weights = None
 
 
 def train(batch: DataFrame, batchId):
-    if batch.count() <= 0:
-        return
-    global model_weights
-    # TODO: evaluate the model on batch and save the results to db or whatever for analysis
-    params = {
-        model.initialWeights: None if not model_weights else np.array(
-            model_weights)
-    }
-    model_weights = model.fit(batch, params).weights.tolist()
-    # TODO: Do this every nth batch maybe
-    kafka_producer.send('modelweights', json.dumps(
-        {'weights': model_weights}).encode())
-    logger.warn(f'{model_weights}')
+    global model
+    for row in batch.collect():
+        params = {trainer.initialWeights: db_model_weights}
+        if model is not None:
+            kafka_producer.send('modelpredictions',
+                                json.dumps({
+                                    'prediction': int(model.predict(row.features)),
+                                    'actual': row.label,
+                                    'weatherid': row.weatherid,
+                                    'pollutionid': row.pollutionid,
+                                }).encode())
+            params[trainer.initialWeights] = model.weights
+        model = trainer.fit(spark.createDataFrame([row]))
+        if random.randint(0, 10) == 0:
+            model.write().overwrite().save(
+                f'/models/model_{batchId}_{random.randint(0, 999999)}')
 
 
-# weather_with_pollution.writeStream          \
-#     .outputMode('append')                   \
-#     .trigger(processingTime='20 seconds')   \
-#     .format('console')                      \
-#     .start()
-
-weather_with_pollution.writeStream  \
-    .foreachBatch(train)            \
+weather_with_pollution.writeStream \
+    .outputMode('append') \
+    .trigger(processingTime='20 seconds') \
+    .format('console') \
+    .start()
+weather_with_pollution.writeStream \
+    .foreachBatch(train) \
     .start().awaitTermination()

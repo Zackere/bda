@@ -6,6 +6,9 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/* && \
     python3 -m pip install numpy kafka-python sasl thrift thrift-sasl PyHive
 ENV SASL_PATH=/usr/lib/x86_64-linux-gnu/sasl2
+RUN mkdir /models
+RUN chown 1001:1001 /models
+RUN chown 1001:1001 .
 USER 1001
 
 COPY model.py .
