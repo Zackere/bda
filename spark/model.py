@@ -1,14 +1,17 @@
 from pyspark.ml.feature import VectorAssembler
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Row
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import column, expr, from_json, udf
 from pyspark.sql.types import *
 from pyspark.ml.classification import MultilayerPerceptronClassifier
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml import Pipeline
 from kafka import KafkaProducer
 import json
 from pyhive import hive
 import time
 import numpy as np
+
 
 
 spark = SparkSession.builder.appName('BDAModel').getOrCreate()
@@ -88,7 +91,7 @@ pollution_df = df_json                                                  \
 
 weather_df = df_json                                                                                            \
     .filter(column('kafkatopic').startswith('weather'))                                                         \
-    .select('lon', 'lat', 'temp', 'pressure', 'humidity', 'clouds', 'windspeed', 'winddeg', 'ts', 'kafkatopic') \
+    .select('id','lon', 'lat', 'temp', 'pressure', 'humidity', 'clouds', 'windspeed', 'winddeg', 'ts', 'kafkatopic') \
     .alias('weather')
 
 
@@ -101,19 +104,16 @@ weather_with_pollution = weather_df.join(
     """),
     "inner")                                \
     .select('weather.*', 'pollution.aqi')   \
-    .drop('ts', 'kafkatopic')
 
-layers = [len(weather_with_pollution.columns) - 1, 5, 6]
+layers = [len(weather_with_pollution.columns) - 4, 5, 6]
 asm = VectorAssembler(inputCols=list(
-    set(weather_with_pollution.columns) - set(['aqi'])), outputCol='features')
-weather_with_pollution = asm            \
-    .transform(weather_with_pollution)  \
-    .withColumn('label', udf(aqi_category, IntegerType())('aqi'))
+    set(weather_with_pollution.columns) - set(['aqi','ts', 'kafkatopic', 'id'])), outputCol='features')
+final_data = weather_with_pollution.withColumn('label', udf(aqi_category, IntegerType())('aqi'))
 
 kafka_producer = KafkaProducer(bootstrap_servers='kafka:9092')
 model = MultilayerPerceptronClassifier(layers=layers)
 num_weights = sum(map(lambda p: (p[0]+1)*p[1], zip(layers, layers[1:])))
-if num_weights != len(model_weights):
+if model_weights and num_weights != len(model_weights):
     logger.warn('Weight data is outdated!')
     model_weights = None
 
@@ -123,11 +123,38 @@ def train(batch: DataFrame, batchId):
         return
     global model_weights
     # TODO: evaluate the model on batch and save the results to db or whatever for analysis
-    params = {
-        model.initialWeights: None if not model_weights else np.array(
-            model_weights)
-    }
-    model_weights = model.fit(batch, params).weights.tolist()
+    # params = {
+    #     model.initialWeights: None if not model_weights else np.array(
+    #         model_weights)
+    # }
+
+    batch.show()
+
+    model.setInitialWeights(None if not model_weights else np.array(model_weights))
+
+    pipeline = Pipeline(stages=[asm, model])
+
+    mockModel = pipeline.fit(batch)
+    result = mockModel.transform(batch)
+    predictionAndLabels = result.select("prediction", "label")
+    evaluator = MulticlassClassificationEvaluator(metricName="accuracy")
+    logger.warn(f'Accuracy: {str(evaluator.evaluate(predictionAndLabels))}')
+    result.show()
+
+    for jsonRow in result.toJSON().collect():
+        kafka_producer.send('modelEvaluation', jsonRow.encode())
+
+    # predictionData.foreach(lambda x: 
+    #     kafka_producer.send('modelEvaluation', json.dumps(
+    #     {'features': x['features'], 'prediction': x['prediciton'], 'label': x['label']}).encode())
+    #     )
+
+    model.setInitialWeights(None if not model_weights else np.array(model_weights))
+    pipeline = Pipeline(stages=[asm, model])
+
+
+    new_model = pipeline.fit(batch)
+    model_weights = new_model.stages[-1].weights.tolist()
     # TODO: Do this every nth batch maybe
     kafka_producer.send('modelweights', json.dumps(
         {'weights': model_weights}).encode())
@@ -140,6 +167,6 @@ def train(batch: DataFrame, batchId):
 #     .format('console')                      \
 #     .start()
 
-weather_with_pollution.writeStream  \
+final_data.writeStream  \
     .foreachBatch(train)            \
     .start().awaitTermination()
