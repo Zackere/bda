@@ -4,6 +4,8 @@ services:
     build: ./historical-data
   kafka:
     build: ./kafka
+    ports:
+      - 9092:9092
   nifi:
     build: ./nifi
     environment:
@@ -34,6 +36,8 @@ services:
     environment:
       HIVE_CORE_CONF_javax_jdo_option_ConnectionURL: jdbc:postgresql://hive-metastore/metastore
       SERVICE_PRECONDITION: hive-metastore:9083
+    ports:
+      - 10000:10000
   hive-metastore:
     image: bde2020/hive:2.3.2-postgresql-metastore
     env_file:
