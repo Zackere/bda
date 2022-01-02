@@ -72,8 +72,14 @@ services:
       - models:/models
   data-aggregation:
     build: ./data-aggregation
+  mongodb:
+    image : mongo
+    ports:
+    - 27017:27017
+    restart: unless-stopped
 
 volumes:
   namenode:
   datanode:
   models:
+  mongodb:

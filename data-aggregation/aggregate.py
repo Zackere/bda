@@ -42,3 +42,5 @@ for city in ['berlin', 'warsaw', 'delhi', 'moscow']:
     if not weather.isnull().values.any():
         kafka_producer.send('weatheraggregations', json.dumps(
             weather.to_dict('records')[0]).encode())
+
+conn.close()
