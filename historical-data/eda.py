@@ -11,9 +11,9 @@ from sklearn.neural_network import MLPClassifier
 import dataframe_image as dfi
 from sklearn.linear_model import LinearRegression
 
-path_plots = '/Users/adaklimczak/Desktop/bda/bda/historical-data/plots'
-path = '/Users/adaklimczak/Desktop/bda/bda/historical-data/weather/'
-path2 = '/Users/adaklimczak/Desktop/bda/bda/historical-data/pollution/'
+path_plots = './historical-data/plots'
+path = './historical-data/weather/'
+path2 = './historical-data/pollution/'
 
 def join_on_city(path,path2,city):
     df = pd.read_json(path+city+'.json')
