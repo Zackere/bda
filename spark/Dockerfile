@@ -15,13 +15,13 @@ COPY model.py .
 COPY server.py .
 
 
-RUN /opt/bitnami/scripts/spark/run.sh & \
+CMD /opt/bitnami/scripts/spark/run.sh & \
     spark-submit \
         --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0 \
         --conf spark.jars.ivy=/tmp/.ivy \
         model.py
 
-# RUN /opt/bitnami/scripts/spark/run.sh & \
+# CMD /opt/bitnami/scripts/spark/run.sh & \
 #     spark-submit \
 #         --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0 \
 #         --conf spark.jars.ivy=/tmp/.ivy \
