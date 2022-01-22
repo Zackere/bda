@@ -19,10 +19,7 @@ CMD /opt/bitnami/scripts/spark/run.sh & \
     spark-submit \
         --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0 \
         --conf spark.jars.ivy=/tmp/.ivy \
-        model.py
-
-# CMD /opt/bitnami/scripts/spark/run.sh & \
-#     spark-submit \
-#         --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0 \
-#         --conf spark.jars.ivy=/tmp/.ivy \
-#         server.py 
+        model.py & \
+        spark-submit \
+        --conf spark.jars.ivy=/tmp/.ivy \
+        server.py 
