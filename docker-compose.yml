@@ -1,5 +1,9 @@
 version: '3'
 services:
+  backend:
+    build: ./backend
+    ports:
+      - 7642:80
   historical-data:
     build: ./historical-data
   kafka:
@@ -72,11 +76,13 @@ services:
       - models:/models
   data-aggregation:
     build: ./data-aggregation
-  mongodb:
-    image : mongo
+  mongo-db:
+    image: mongo
     ports:
-    - 27017:27017
+      - 27017:27017
     restart: unless-stopped
+    volumes:
+      - mongodb:/data/db
 
 volumes:
   namenode:
