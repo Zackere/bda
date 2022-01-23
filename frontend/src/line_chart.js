@@ -9,7 +9,6 @@ import {
 } from 'recharts';
 
 export default function ({ data, x, y, title }) {
-  console.log(data);
   return (
     <div
       style={{
@@ -27,6 +26,7 @@ export default function ({ data, x, y, title }) {
         <Tooltip />
         <Legend />
         <Line
+          isAnimationActive={true}
           type="monotone"
           dataKey={y}
           stroke="#8884d8"

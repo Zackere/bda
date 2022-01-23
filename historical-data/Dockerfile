@@ -1,7 +1,6 @@
 FROM node:latest
 
 COPY package.json /app/
-COPY serve.js /app/
 
 COPY pollution/berlin.json /app/data/pollution/
 COPY pollution/delhi.json /app/data/pollution/
@@ -13,8 +12,9 @@ COPY weather/delhi.json /app/data/weather/
 COPY weather/moscow.json /app/data/weather/
 COPY weather/warsaw.json /app/data/weather/
 
-
 WORKDIR /app
 RUN npm install
 EXPOSE 80
+
+COPY serve.js /app/
 ENTRYPOINT [ "node", "serve.js" ]

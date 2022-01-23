@@ -10,14 +10,16 @@ export default function ({ city }) {
     unit: 'metric',
   });
   return (
-    <ReactWeather
-      isLoading={false}
-      errorMessage={errorMessage}
-      data={data}
-      lang="en"
-      locationLabel={city.displayName}
-      unitsLabels={{ temperature: '°C', windSpeed: 'Km/h' }}
-      showForecast={true}
-    />
+    <div>
+      <ReactWeather
+        isLoading={false}
+        errorMessage={errorMessage}
+        data={data}
+        lang="en"
+        locationLabel={city.displayName}
+        unitsLabels={{ temperature: '°C', windSpeed: 'Km/h' }}
+        showForecast={true}
+      />
+    </div>
   );
 }

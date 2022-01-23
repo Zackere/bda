@@ -10,7 +10,7 @@ app.get('/', cors(), async (req, res) => {
   const ret = await db
     .collection(req.query.db)
     .find()
-    .sort({ date: -1 })
+    .sort({ date: 1 })
     .toArray();
   await client.close();
   res.json(ret);

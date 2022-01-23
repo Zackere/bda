@@ -12,7 +12,6 @@ import random
 import base64
 import shutil
 import os
-from datetime import datetime
 
 
 spark = SparkSession.builder.appName('BDAModel').getOrCreate()
@@ -116,7 +115,7 @@ weather_with_pollution = weather_df.join(
          weather.ts + interval 10 seconds > pollution.ts                                                AND
          weather.ts < pollution.ts + interval 10 seconds
     """),
-    "inner")                                                        \
+    "inner") \
     .withColumn('city', udf(lambda s: s.replace('weather', ''), StringType())('weather.kafkatopic')) \
     .select('weather.*', 'pollution.*', 'city')  \
     .drop('ts', 'kafkatopic') \
@@ -143,10 +142,12 @@ if db_model_weights is not None:
 def train(batch: DataFrame, batchId):
     global model
     rows = batch.collect()
-    random.shuffle(rows)
+    rows.sort(key=lambda r: r.ts)
     for i, row in enumerate(rows):
-        params = {trainer.initialWeights: db_model_weights}
-        logger.warn(f'Processing row {i}/{len(rows)} of batch {batchId}')
+        params = {trainer.initialWeights: db_model_weights,
+                  trainer.stepSize: 0.03}
+        logger.warn(
+            f'Processing row {i}/{len(rows)} of batch {batchId}. City: {row.city}')
         if model is not None:
             kafka_producer.send(f'modelpredictions{row.city}',
                                 json.dumps({
@@ -159,7 +160,7 @@ def train(batch: DataFrame, batchId):
                                 }).encode())
             params[trainer.initialWeights] = model.weights
         model = trainer.fit(spark.createDataFrame([row]), params=params)
-        if i != 0 and i == 1 or random.randint(0, 100) == 0:
+        if random.randint(0, 100) == 0:
             fname = f'/models/model_{batchId}_{i}_{random.randint(0, 999999)}'
             logger.warn(f'Saving model data to {fname}')
             model.write().overwrite().save(fname)

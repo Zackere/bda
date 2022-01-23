@@ -87,7 +87,9 @@ export default function () {
         setNewestPollution(d.data.aqi);
       });
   }, [activeCity]);
-  console.log(pollutionAggregates, weatherAggregates);
+  const aqi = pollutionAggregates
+    ? Math.round(pollutionAggregates[pollutionAggregates.length - 1].avgaqi)
+    : 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', rowGap: '20px' }}>
@@ -119,14 +121,10 @@ export default function () {
       >
         {pollutionAggregates ? (
           <ShortStat
-            color={airStatusColor(pollutionAggregates[0].avgaqi)}
+            color={airStatusColor(aqi)}
             title="Air Status"
-            value={`${pollutionAggregates[0].avgaqi} (${aqiCategory(
-              pollutionAggregates[0].avgaqi,
-            )})`}
-            fillPercentage={
-              (Math.min(pollutionAggregates[0].avgaqi, 300) / 300) * 100
-            }
+            value={`${aqi} (${aqiCategory(aqi)})`}
+            fillPercentage={(Math.min(aqi, 300) / 300) * 100}
           />
         ) : (
           <div
@@ -166,38 +164,59 @@ export default function () {
           setActiveCity={setActiveCity}
           cities={availableCities}
         />
-        {!showPollution ? (
-          <Button
-            variant="primary"
-            style={{
-              alignSelf: 'center',
-              whiteSpace: 'normal',
-              maxWidth: '200px',
-            }}
-            onClick={() => setShowPollution(true)}
-          >{`Fetch pollution for ${availableCities[activeCity].displayName} from AQICN API`}</Button>
-        ) : (
-          <CurrentPollution
-            city={availableCities[activeCity]}
-            aqi={`${newestPollution} (${aqiCategory(newestPollution)})`}
-            color={airStatusColor(newestPollution)}
-          />
-        )}
-        {showWeather ? (
-          <Weather city={availableCities[activeCity]} />
-        ) : (
-          <Button
-            variant="primary"
-            style={{
-              alignSelf: 'center',
-              whiteSpace: 'normal',
-              maxWidth: '200px',
-            }}
-            onClick={() => setShowWeather(true)}
-          >
-            {`Fetch weather for ${availableCities[activeCity].displayName} from Openweathermap API`}
-          </Button>
-        )}
+        <div
+          style={{
+            background: '#f6f6f6',
+            alignSelf: 'stretch',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '25px',
+          }}
+        >
+          {!showPollution ? (
+            <Button
+              variant="primary"
+              style={{
+                alignSelf: 'center',
+                whiteSpace: 'normal',
+                maxWidth: '200px',
+              }}
+              onClick={() => setShowPollution(true)}
+            >{`Fetch pollution for ${availableCities[activeCity].displayName} from AQICN API`}</Button>
+          ) : (
+            <CurrentPollution
+              city={availableCities[activeCity]}
+              aqi={`${newestPollution} (${aqiCategory(newestPollution)})`}
+              color={airStatusColor(newestPollution)}
+            />
+          )}
+        </div>
+        <div
+          style={{
+            background: '#f6f6f6',
+            alignSelf: 'stretch',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '25px',
+          }}
+        >
+          {showWeather ? (
+            <Weather city={availableCities[activeCity]} />
+          ) : (
+            <Button
+              variant="primary"
+              style={{
+                alignSelf: 'center',
+                whiteSpace: 'normal',
+                maxWidth: '200px',
+              }}
+              onClick={() => setShowWeather(true)}
+            >
+              {`Fetch weather for ${availableCities[activeCity].displayName} from Openweathermap API`}
+            </Button>
+          )}
+        </div>
+
         {pollutionAggregates ? (
           <LineChart
             data={pollutionAggregates.map(p => ({
