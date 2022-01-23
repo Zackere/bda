@@ -12,7 +12,12 @@ export default function ({ data, x, y, title }) {
   console.log(data);
   return (
     <div
-      style={{ display: 'flex', flexDirection: 'column', textAlign: 'center' }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        textAlign: 'center',
+        background: '#f9f9f9',
+      }}
     >
       <div>{title}</div>
       <LineChart data={data} width={500} height={500}>
