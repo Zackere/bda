@@ -1,0 +1,33 @@
+import {
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+} from 'recharts';
+
+export default function ({ data, x, y, title }) {
+  console.log(data);
+  return (
+    <div
+      style={{ display: 'flex', flexDirection: 'column', textAlign: 'center' }}
+    >
+      <div>{title}</div>
+      <LineChart data={data} width={500} height={500}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey={x} />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        <Line
+          type="monotone"
+          dataKey={y}
+          stroke="#8884d8"
+          activeDot={{ r: 8 }}
+        />
+      </LineChart>
+    </div>
+  );
+}
