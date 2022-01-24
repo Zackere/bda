@@ -21,10 +21,11 @@ for i in range(100):
 class Handler(FileSystemEventHandler):
     @staticmethod
     def on_created(event):
-        print(event)
+        print(f'Noticed creation of: {event}')
         if not event.is_directory:
             return
-        time.sleep(5)
+        time.sleep(1)
+        print(f'Now handling: {event}', flush=True)
         shutil.make_archive('/model', 'gztar', event.src_path)
         with open('/model.tar.gz', 'rb') as f:
             data = f.read()

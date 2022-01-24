@@ -104,6 +104,7 @@ weather_df = df_json \
     .filter(column('kafkatopic').startswith('weather')) \
     .select('lon', 'lat', 'temp', 'pressure', 'humidity', 'clouds', 'windspeed', 'winddeg', 'ts', 'kafkatopic', 'id') \
     .withColumnRenamed('id', 'weatherid') \
+    .withColumn('weatherts', column('ts')) \
     .alias('weather')
 
 
@@ -114,13 +115,16 @@ weather_with_pollution = weather_df.join(
          weather.ts + interval 10 seconds > pollution.ts                                                AND
          weather.ts < pollution.ts + interval 10 seconds
     """),
-    "inner")                                                        \
-    .select('weather.*', 'pollution.*')  \
-    .drop('ts', 'kafkatopic')
+    "inner") \
+    .withColumn('city', udf(lambda s: s.replace('weather', ''), StringType())('weather.kafkatopic')) \
+    .select('weather.*', 'pollution.*', 'city')  \
+    .drop('ts', 'kafkatopic') \
+    .withColumnRenamed('weatherts', 'ts')
 
 input_cols = list(
-    set(weather_with_pollution.columns) - set(['aqi', 'pollutionid', 'weatherid']))
-layers = [len(input_cols), 5, 6]
+    set(weather_with_pollution.columns) - set(['aqi', 'pollutionid', 'weatherid', 'city', 'ts']))
+
+layers = [len(input_cols), 50, 6]
 asm = VectorAssembler(inputCols=input_cols, outputCol='features')
 weather_with_pollution = asm \
     .transform(weather_with_pollution) \
@@ -138,21 +142,29 @@ if db_model_weights is not None:
 
 def train(batch: DataFrame, batchId):
     global model
-    for row in batch.collect():
-        params = {trainer.initialWeights: db_model_weights}
+    rows = batch.collect()
+    rows.sort(key=lambda r: r.ts)
+    for i, row in enumerate(rows):
+        params = {trainer.initialWeights: db_model_weights,
+                  trainer.stepSize: 0.03}
+        logger.warn(
+            f'Processing row {i}/{len(rows)} of batch {batchId}. City: {row.city}')
         if model is not None:
-            kafka_producer.send('modelpredictions',
+            kafka_producer.send(f'modelpredictions{row.city}',
                                 json.dumps({
                                     'prediction': int(model.predict(row.features)),
                                     'actual': row.label,
                                     'weatherid': row.weatherid,
                                     'pollutionid': row.pollutionid,
+                                    'city': row.city,
+                                    'ts': row.ts.strftime('%Y-%m-%d %H:%M:%S.%f'),
                                 }).encode())
             params[trainer.initialWeights] = model.weights
-        model = trainer.fit(spark.createDataFrame([row]))
-        if random.randint(0, 10) == 0:
-            model.write().overwrite().save(
-                f'/models/model_{batchId}_{random.randint(0, 999999)}')
+        model = trainer.fit(spark.createDataFrame([row]), params=params)
+        if random.randint(0, 40) == 0:
+            fname = f'/models/model_{batchId}_{i}_{random.randint(0, 999999)}'
+            logger.warn(f'Saving model data to {fname}')
+            model.write().overwrite().save(fname)
 
 
 weather_with_pollution.writeStream \

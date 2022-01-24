@@ -21,11 +21,14 @@ conn = hive.Connection(host='hive-server')
 
 for city in ['berlin', 'warsaw', 'delhi', 'moscow']:
     pollution = pd.read_sql(f"""
-            select min(aqi) as MinAQI, max(aqi) as MaxAQI, avg(aqi) as AvgAQI, '{city}' as City, '{start_date}' as `Date` from pollution{city}
+            select
+                min(aqi) as MinAQI, max(aqi) as MaxAQI, avg(aqi) as AvgAQI,
+                '{start_date}' as `Date`
+            from pollution{city}
             where measured between {start_date} and {end_date}
         """, conn)
     if not pollution.isnull().values.any():
-        kafka_producer.send('pollutionaggregations', json.dumps(
+        kafka_producer.send(f'pollution{city}aggregations', json.dumps(
             pollution.to_dict('records')[0]).encode())
     weather = pd.read_sql(f"""
             select 
@@ -35,12 +38,12 @@ for city in ['berlin', 'warsaw', 'delhi', 'moscow']:
                 min(clouds) as MinClouds,       max(clouds) as MaxClouds,       avg(clouds) as AvgClouds,
                 min(windspeed) as MinWindspeed, max(windspeed) as MaxWindspeed, avg(windspeed) as AvgWindspeed,
                 min(winddeg) as MinWindDegree,  max(winddeg) as MaxWindDegree,  avg(winddeg) as AvgWindDegree,
-                '{city}' as City, {start_date} as `Date`
+                {start_date} as `Date`
             from weather{city}
             where measured between {start_date} and {end_date}
         """, conn)
     if not weather.isnull().values.any():
-        kafka_producer.send('weatheraggregations', json.dumps(
+        kafka_producer.send(f'weather{city}aggregations', json.dumps(
             weather.to_dict('records')[0]).encode())
 
 conn.close()
