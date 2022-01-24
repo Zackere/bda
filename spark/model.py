@@ -123,6 +123,7 @@ weather_with_pollution = weather_df.join(
 
 input_cols = list(
     set(weather_with_pollution.columns) - set(['aqi', 'pollutionid', 'weatherid', 'city', 'ts']))
+
 layers = [len(input_cols), 50, 6]
 asm = VectorAssembler(inputCols=input_cols, outputCol='features')
 weather_with_pollution = asm \
@@ -160,7 +161,7 @@ def train(batch: DataFrame, batchId):
                                 }).encode())
             params[trainer.initialWeights] = model.weights
         model = trainer.fit(spark.createDataFrame([row]), params=params)
-        if random.randint(0, 100) == 0:
+        if random.randint(0, 40) == 0:
             fname = f'/models/model_{batchId}_{i}_{random.randint(0, 999999)}'
             logger.warn(f'Saving model data to {fname}')
             model.write().overwrite().save(fname)

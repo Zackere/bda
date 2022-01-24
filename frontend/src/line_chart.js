@@ -7,8 +7,15 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
+const maxNumPoints = 50;
 
 export default function ({ data, x, y, title }) {
+  if (data.length > maxNumPoints) {
+    const indices = [...Array(maxNumPoints).keys()].map(i =>
+      Math.floor((i / maxNumPoints) * data.length),
+    );
+    data = indices.map(i => data[i]);
+  }
   return (
     <div
       style={{
@@ -26,11 +33,10 @@ export default function ({ data, x, y, title }) {
         <Tooltip />
         <Legend />
         <Line
-          isAnimationActive={true}
+          isAnimationActive={false}
           type="monotone"
           dataKey={y}
           stroke="#8884d8"
-          activeDot={{ r: 8 }}
         />
       </LineChart>
     </div>

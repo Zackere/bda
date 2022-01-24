@@ -57,6 +57,7 @@ services:
       - SPARK_SSL_ENABLED=no
     ports:
       - 8080:8080
+      - 4444:4444
     volumes:
       - models:/models
   spark-worker:
