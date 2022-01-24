@@ -13,6 +13,7 @@ export default function ({ activeCity, setActiveCity, cities }) {
     fill: 'white',
     outline: 'none',
     stroke: 'black',
+    strokeWidth: '0.5',
   };
 
   return (
@@ -30,7 +31,7 @@ export default function ({ activeCity, setActiveCity, cities }) {
         style={{
           width: '450px',
           height: '350px',
-          background: '#86eae9',
+          background: '#cce5ff',
           margin: 'auto',
         }}
       >
